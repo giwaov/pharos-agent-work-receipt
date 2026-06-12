@@ -8,6 +8,27 @@ Pharos Agent Work Receipt is a reusable Skill for the Pharos AI Agent economy. I
 
 The project includes a Solidity receipt contract, a Node.js Skill CLI, agent behavior rules, and hackathon submission notes.
 
+## Mainnet Deployment
+
+AgentWorkReceipt is deployed on Pharos Mainnet.
+
+| Field | Value |
+|---|---|
+| Network | Pharos Mainnet |
+| Chain ID | `1672` (`0x688`) |
+| Currency | `PROS` |
+| RPC used | `https://infra.originstake.com/pharos/evm` |
+| Contract | `0x0Aa0e39BF90d71530684EC2E80037639560646fD` |
+| Deployer | `0x28abA2DFcf42eAdfEe60CeBFA650aC7184652424` |
+| Deployment tx | `0x95b4a1be12d18d390ef28510b33110e363c959ba2b44435b57de763732f6bf04` |
+| Deployment block | `9974379` |
+
+Verification:
+
+- Transaction receipt status: `0x1`
+- `eth_getCode` confirms bytecode at the contract address
+- CLI `doctor --contract` reports `"deployed": true`
+
 ## Why This Matters
 
 AI agents will increasingly call other agents to complete specialized tasks: look up data, monitor wallets, generate reports, execute strategies, or run protocol-specific Skills. If those tasks are paid, the ecosystem needs a reliable record of what happened.
@@ -155,6 +176,30 @@ The provided Pharos mainnet RPC was checked with `doctor`:
       "expectedChainId": 1672,
       "actualChainId": 1672,
       "chainOk": true
+    },
+    "verdict": "ready"
+  },
+  "error": null
+}
+```
+
+The deployed contract was also checked with `doctor --contract`:
+
+```json
+{
+  "status": "success",
+  "action": "doctor",
+  "data": {
+    "network": {
+      "name": "Pharos Mainnet",
+      "expectedChainId": 1672,
+      "actualChainId": 1672,
+      "chainOk": true
+    },
+    "contract": {
+      "address": "0x0Aa0e39BF90d71530684EC2E80037639560646fD",
+      "deployed": true,
+      "byteLength": 1045
     },
     "verdict": "ready"
   },

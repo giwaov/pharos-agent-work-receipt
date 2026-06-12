@@ -8,6 +8,22 @@ Pharos Agent Work Receipt
 
 Pay an AI agent for completed work and print an on-chain receipt on Pharos.
 
+## Mainnet Proof
+
+AgentWorkReceipt is live on Pharos Mainnet.
+
+| Field | Value |
+|---|---|
+| Network | Pharos Mainnet |
+| Chain ID | `1672` (`0x688`) |
+| Currency | `PROS` |
+| Contract | `0x0Aa0e39BF90d71530684EC2E80037639560646fD` |
+| Deployer | `0x28abA2DFcf42eAdfEe60CeBFA650aC7184652424` |
+| Deployment tx | `0x95b4a1be12d18d390ef28510b33110e363c959ba2b44435b57de763732f6bf04` |
+| Deployment block | `9974379` |
+
+The deployment receipt returned status `0x1`, and `eth_getCode` confirms contract bytecode at the deployed address.
+
 ## The 30-Second Pitch
 
 AI agents will call each other to get work done. One agent might ask another agent to check a price, write a report, monitor a wallet, or execute a Skill.
@@ -178,6 +194,24 @@ Pharos mainnet RPC check:
       "expectedChainId": 1672,
       "actualChainId": 1672,
       "chainOk": true
+    },
+    "verdict": "ready"
+  },
+  "error": null
+}
+```
+
+Deployed contract check:
+
+```json
+{
+  "status": "success",
+  "action": "doctor",
+  "data": {
+    "contract": {
+      "address": "0x0Aa0e39BF90d71530684EC2E80037639560646fD",
+      "deployed": true,
+      "byteLength": 1045
     },
     "verdict": "ready"
   },
