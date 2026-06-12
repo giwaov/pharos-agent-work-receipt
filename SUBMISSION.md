@@ -1,4 +1,4 @@
-# DoraHacks Submission Draft
+# Hackathon Submission
 
 ## Project Name
 
@@ -45,8 +45,8 @@ The caller sends PROS to the contract with:
 
 - provider address,
 - Skill name,
-- input hash,
-- output hash,
+- SHA-256 input hash,
+- SHA-256 output hash,
 - optional metadata URI.
 
 The contract sends PROS to the provider and emits:
@@ -56,6 +56,12 @@ AgentWorkPaid(receiptId, caller, provider, skill, amountWei, inputHash, outputHa
 ```
 
 ## Commands
+
+Install:
+
+```bash
+npm install
+```
 
 Build:
 
@@ -125,7 +131,7 @@ Phase 2 can turn this into a full **Agent Job Board**:
 | Originality | Creates a simple receipt layer for paid AI-agent work. |
 | Technical quality | Solidity contract, Pharos RPC checks, transaction calldata generation. |
 | Practical use | Any paid Skill can use it. |
-| Reusability | Skill name, input hash, output hash, and metadata work for many agent tasks. |
+| Reusability | Skill name, SHA-256 input hash, SHA-256 output hash, and metadata work for many agent tasks. |
 | Pharos integration | Native PROS payment and receipt event. |
 | Documentation | Simple explanation, commands, and agent behavior rules. |
 
@@ -150,3 +156,13 @@ Receipt plan output:
   "error": null
 }
 ```
+
+## Repository Structure
+
+| File | Purpose |
+|---|---|
+| `contracts/AgentWorkReceipt.sol` | Solidity payment and receipt contract |
+| `pharos-agent-work-receipt.mjs` | Skill CLI |
+| `README.md` | Judge-facing overview and demo flow |
+| `SKILL.md` | Skill interface and output contract |
+| `AGENT.md` | Agent behavior and guardrails |

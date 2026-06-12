@@ -7,7 +7,7 @@ metadata:
   user-invocable: "true"
   arguments: "doctor | receipt | prepare-pay | deploy"
   entry: "pharos-agent-work-receipt/pharos-agent-work-receipt.mjs"
-  requires: "node, ethers, foundry, pharos-rpc"
+  requires: "node, foundry, pharos-rpc"
   tags: "pharos, ai-agent, payments, receipts, infrastructure, write"
 ---
 
@@ -26,7 +26,7 @@ When one agent does useful work for another agent, the caller can pay the provid
 - what input was requested,
 - what output was delivered.
 
-The input and output are stored as hashes, so private details do not need to be put on-chain.
+The input and output are stored as SHA-256 hashes, so private details do not need to be put on-chain.
 
 ## Why Agents Need It
 
@@ -140,7 +140,7 @@ Blocked:
 
 - The Skill never accepts private keys as command-line arguments.
 - Deployment requires a local environment variable.
-- The receipt contract only stores hashes of input and output.
+- The receipt contract only stores SHA-256 hashes of input and output.
 - The provider must be a valid address.
 - The payment amount must be greater than zero.
 

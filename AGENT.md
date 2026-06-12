@@ -20,7 +20,7 @@ description: "Agent behavior for paying AI agents and recording simple on-chain 
 - Never guess a provider address.
 - Never pay before the output is delivered.
 - Never put private user data directly on-chain.
-- Use hashes for input and output.
+- Use SHA-256 hashes for input and output.
 - Never pass private keys as command arguments.
 
 ## On Error

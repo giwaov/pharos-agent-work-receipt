@@ -10,7 +10,5 @@
     "receipt": "node pharos-agent-work-receipt.mjs receipt",
     "demo": "node pharos-agent-work-receipt.mjs receipt --caller 0x0000000000000000000000000000000000000001 --provider 0x0000000000000000000000000000000000000002 --skill weather.lookup --price 0.01 --input '{\"city\":\"Lagos\"}' --output '{\"forecast\":\"sunny\"}'"
   },
-  "dependencies": {
-    "ethers": "^6.16.0"
-  }
+  "dependencies": {}
 }

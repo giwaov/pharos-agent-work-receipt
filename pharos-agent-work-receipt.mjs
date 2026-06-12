@@ -1,19 +1,15 @@
 #!/usr/bin/env node
 
-import { ethers } from "ethers";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_RPC_URL = "https://atlantic.dplabs-internal.com";
 const EXPECTED_CHAIN_ID = 688689n;
 const NETWORK_NAME = "Pharos Atlantic Testnet";
-
-const ABI = [
-  "function receiptCount() view returns (uint256)",
-  "function payForWork(address provider,string skill,bytes32 inputHash,bytes32 outputHash,string metadataURI) payable returns (bytes32)",
-  "event AgentWorkPaid(bytes32 indexed receiptId,address indexed caller,address indexed provider,string skill,uint256 amountWei,bytes32 inputHash,bytes32 outputHash,string metadataURI)",
-];
+const PAY_FOR_WORK_SELECTOR = "efcbc809";
 
 function emit(payload) {
   console.log(JSON.stringify(payload, (_key, value) => (
@@ -50,19 +46,33 @@ function parseArgs(argv) {
   return args;
 }
 
-function provider() {
-  return new ethers.JsonRpcProvider(process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL);
+async function rpcCall(method, params = []) {
+  const response = await fetch(process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`RPC HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  const body = await response.json();
+  if (body.error) {
+    throw new Error(`${body.error.code}: ${body.error.message}`);
+  }
+  return body.result;
 }
 
 function hashText(value) {
-  return ethers.keccak256(ethers.toUtf8Bytes(value || ""));
+  return `0x${crypto.createHash("sha256").update(value || "", "utf8").digest("hex")}`;
 }
 
 function requireAddress(value, name) {
-  if (!ethers.isAddress(value || "")) {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(value || "")) {
     throw new Error(`${name} must be a valid EVM address.`);
   }
-  return ethers.getAddress(value);
+  return value;
 }
 
 function requireSkill(value) {
@@ -72,28 +82,106 @@ function requireSkill(value) {
   return value;
 }
 
-function requirePrice(value) {
+function parseProsToWei(value) {
   if (!value || !/^(0|[1-9]\d*)(\.\d{1,18})?$/.test(value)) {
     throw new Error("--price must be a positive PROS amount, like 0.01.");
   }
-  const parsed = ethers.parseEther(value);
-  if (parsed <= 0n) throw new Error("--price must be greater than zero.");
-  return parsed;
+
+  const [whole, fractional = ""] = value.split(".");
+  const wei = BigInt(whole) * 10n ** 18n + BigInt((fractional + "0".repeat(18)).slice(0, 18));
+  if (wei <= 0n) {
+    throw new Error("--price must be greater than zero.");
+  }
+  return wei;
+}
+
+function formatWeiAsPros(wei) {
+  const whole = wei / 10n ** 18n;
+  const fraction = (wei % 10n ** 18n).toString().padStart(18, "0").replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}
+
+function requireBytes32(value, name) {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(value || "")) {
+    throw new Error(`${name} must be bytes32.`);
+  }
+  return value.toLowerCase();
+}
+
+function word(hexWithoutPrefix) {
+  return hexWithoutPrefix.padStart(64, "0");
+}
+
+function encodeUint(value) {
+  return word(value.toString(16));
+}
+
+function encodeAddress(address) {
+  return word(address.slice(2).toLowerCase());
+}
+
+function encodeBytes32(value) {
+  return value.slice(2).toLowerCase();
+}
+
+function encodeString(value) {
+  const hex = Buffer.from(value, "utf8").toString("hex");
+  const byteLength = BigInt(hex.length / 2);
+  const paddedLength = Math.ceil(hex.length / 64) * 64;
+  return encodeUint(byteLength) + hex.padEnd(paddedLength, "0");
+}
+
+function encodePayForWork(provider, skill, inputHash, outputHash, metadataURI) {
+  const encodedSkill = encodeString(skill);
+  const encodedMetadata = encodeString(metadataURI);
+  const skillOffset = 5n * 32n;
+  const metadataOffset = skillOffset + BigInt(encodedSkill.length / 2);
+
+  const head = [
+    encodeAddress(provider),
+    encodeUint(skillOffset),
+    encodeBytes32(inputHash),
+    encodeBytes32(outputHash),
+    encodeUint(metadataOffset),
+  ].join("");
+
+  return `0x${PAY_FOR_WORK_SELECTOR}${head}${encodedSkill}${encodedMetadata}`;
+}
+
+function buildReceipt(args) {
+  const caller = requireAddress(args.caller, "--caller");
+  const provider = requireAddress(args.provider, "--provider");
+  const skill = requireSkill(args.skill);
+  const priceWei = parseProsToWei(args.price);
+  const inputHash = args["input-hash"] ? requireBytes32(args["input-hash"], "--input-hash") : hashText(args.input || "");
+  const outputHash = args["output-hash"] ? requireBytes32(args["output-hash"], "--output-hash") : hashText(args.output || "");
+  const metadataURI = args["metadata-uri"] || "";
+
+  return {
+    caller,
+    provider,
+    skill,
+    priceWei,
+    pricePros: formatWeiAsPros(priceWei),
+    inputHash,
+    outputHash,
+    metadataURI,
+  };
 }
 
 async function doctor(args) {
-  const rpc = provider();
   try {
-    const [network, blockNumber, feeData] = await Promise.all([
-      rpc.getNetwork(),
-      rpc.getBlockNumber(),
-      rpc.getFeeData(),
+    const [chainIdHex, blockNumberHex, gasPriceHex] = await Promise.all([
+      rpcCall("eth_chainId"),
+      rpcCall("eth_blockNumber"),
+      rpcCall("eth_gasPrice"),
     ]);
 
+    const actualChainId = BigInt(chainIdHex);
     let contract = null;
     if (args.contract) {
       const contractAddress = requireAddress(args.contract, "--contract");
-      const code = await rpc.getCode(contractAddress);
+      const code = await rpcCall("eth_getCode", [contractAddress, "latest"]);
       contract = {
         address: contractAddress,
         deployed: code !== "0x",
@@ -102,53 +190,30 @@ async function doctor(args) {
     }
 
     ok("doctor", {
-      runtime: { node: process.version, ethers: ethers.version },
-      rpc: { url: process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL, reachable: true },
+      runtime: {
+        node: process.version,
+        dependencies: "none",
+      },
+      rpc: {
+        url: process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL,
+        reachable: true,
+      },
       network: {
         name: NETWORK_NAME,
         expectedChainId: Number(EXPECTED_CHAIN_ID),
-        actualChainId: Number(network.chainId),
-        chainOk: network.chainId === EXPECTED_CHAIN_ID,
-        latestBlock: blockNumber,
+        actualChainId: Number(actualChainId),
+        chainOk: actualChainId === EXPECTED_CHAIN_ID,
+        latestBlock: Number(BigInt(blockNumberHex)),
       },
       feeData: {
-        gasPriceWei: feeData.gasPrice?.toString() || null,
-        maxFeePerGasWei: feeData.maxFeePerGas?.toString() || null,
+        gasPriceWei: BigInt(gasPriceHex).toString(),
       },
       contract,
-      verdict: network.chainId === EXPECTED_CHAIN_ID ? "ready" : "wrong_chain",
+      verdict: actualChainId === EXPECTED_CHAIN_ID ? "ready" : "wrong_chain",
     });
   } catch (error) {
     fail("doctor", "DOCTOR_ERROR", error.message, "Check RPC URL, network access, or contract address.");
   }
-}
-
-function buildReceipt(args) {
-  const caller = requireAddress(args.caller, "--caller");
-  const providerAddress = requireAddress(args.provider, "--provider");
-  const skill = requireSkill(args.skill);
-  const priceWei = requirePrice(args.price);
-  const inputHash = args["input-hash"] || hashText(args.input || "");
-  const outputHash = args["output-hash"] || hashText(args.output || "");
-  const metadataURI = args["metadata-uri"] || "";
-
-  if (!/^0x[0-9a-fA-F]{64}$/.test(inputHash)) {
-    throw new Error("--input-hash must be bytes32.");
-  }
-  if (!/^0x[0-9a-fA-F]{64}$/.test(outputHash)) {
-    throw new Error("--output-hash must be bytes32.");
-  }
-
-  return {
-    caller,
-    provider: providerAddress,
-    skill,
-    priceWei,
-    pricePros: ethers.formatEther(priceWei),
-    inputHash,
-    outputHash,
-    metadataURI,
-  };
 }
 
 async function receipt(args) {
@@ -173,14 +238,13 @@ async function preparePay(args) {
 
     const contract = requireAddress(args.contract, "--contract");
     const data = buildReceipt(args);
-    const iface = new ethers.Interface(ABI);
-    const calldata = iface.encodeFunctionData("payForWork", [
+    const calldata = encodePayForWork(
       data.provider,
       data.skill,
       data.inputHash,
       data.outputHash,
       data.metadataURI,
-    ]);
+    );
 
     ok("prepare-pay", {
       to: contract,
@@ -196,14 +260,12 @@ async function preparePay(args) {
   }
 }
 
-function loadBytecode() {
+function ensureArtifactExists() {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const artifactPath = path.join(here, "out", "AgentWorkReceipt.sol", "AgentWorkReceipt.json");
   if (!fs.existsSync(artifactPath)) {
     throw new Error("Missing Foundry artifact. Run `forge build` first.");
   }
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
-  return artifact.bytecode?.object || artifact.bytecode;
 }
 
 async function deploy(args) {
@@ -218,24 +280,34 @@ async function deploy(args) {
       return;
     }
 
-    const rpc = provider();
-    const network = await rpc.getNetwork();
-    if (network.chainId !== EXPECTED_CHAIN_ID) {
+    const chainIdHex = await rpcCall("eth_chainId");
+    if (BigInt(chainIdHex) !== EXPECTED_CHAIN_ID) {
       blocked("deploy", "WRONG_CHAIN", "RPC is not Pharos Atlantic Testnet.", "Set PHAROS_RPC_URL to the Pharos Atlantic RPC.");
       return;
     }
 
-    const wallet = new ethers.Wallet(privateKey, rpc);
-    const factory = new ethers.ContractFactory(ABI, loadBytecode(), wallet);
-    const contract = await factory.deploy();
-    const tx = contract.deploymentTransaction();
-    await contract.waitForDeployment();
+    ensureArtifactExists();
+
+    const result = spawnSync("forge", [
+      "create",
+      "contracts/AgentWorkReceipt.sol:AgentWorkReceipt",
+      "--rpc-url",
+      process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL,
+      "--private-key",
+      privateKey,
+    ], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+
+    if (result.status !== 0) {
+      throw new Error(result.stderr || result.stdout || "forge create failed");
+    }
 
     ok("deploy", {
-      deployer: wallet.address,
-      contract: await contract.getAddress(),
-      txHash: tx?.hash || null,
-      chainId: Number(network.chainId),
+      network: NETWORK_NAME,
+      output: result.stdout.trim(),
+      note: "Inspect forge output for deployed contract address and transaction hash.",
     });
   } catch (error) {
     fail("deploy", "DEPLOY_ERROR", error.message, "Run forge build, fund deployer wallet, and retry.");
@@ -251,6 +323,10 @@ function help() {
       "prepare-pay --contract <address> --caller <address> --provider <address> --skill <name> --price <PROS> --input <json|string> --output <json|string>",
       "deploy --broadcast",
     ],
+    environment: {
+      PHAROS_RPC_URL: `Optional. Defaults to ${DEFAULT_RPC_URL}`,
+      PHAROS_DEPLOYER_PRIVATE_KEY: "Required only for deploy --broadcast.",
+    },
   });
 }
 
