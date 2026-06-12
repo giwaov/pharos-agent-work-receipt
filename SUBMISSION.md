@@ -72,8 +72,8 @@ forge build
 Check Pharos:
 
 ```bash
-PHAROS_RPC_URL=https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC \
-PHAROS_CHAIN_ID=YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID \
+PHAROS_RPC_URL=https://infra.originstake.com/pharos/evm \
+PHAROS_CHAIN_ID=1672 \
 node pharos-agent-work-receipt.mjs doctor
 ```
 
@@ -105,8 +105,8 @@ node pharos-agent-work-receipt.mjs prepare-pay \
 Deploy:
 
 ```bash
-PHAROS_RPC_URL=https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC \
-PHAROS_CHAIN_ID=YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID \
+PHAROS_RPC_URL=https://infra.originstake.com/pharos/evm \
+PHAROS_CHAIN_ID=1672 \
 PHAROS_DEPLOYER_PRIVATE_KEY=0x... \
 node pharos-agent-work-receipt.mjs deploy --broadcast
 ```
@@ -157,6 +157,29 @@ Receipt plan output:
   "data": {
     "summary": "0x0000000000000000000000000000000000000001 pays 0x0000000000000000000000000000000000000002 0.01 PROS for weather.lookup",
     "explanation": "This is the payment receipt plan. The contract will pay the provider and emit this work receipt on-chain."
+  },
+  "error": null
+}
+```
+
+Pharos mainnet RPC check:
+
+```json
+{
+  "status": "success",
+  "action": "doctor",
+  "data": {
+    "rpc": {
+      "url": "https://infra.originstake.com/pharos/evm",
+      "reachable": true
+    },
+    "network": {
+      "name": "Pharos Mainnet",
+      "expectedChainId": 1672,
+      "actualChainId": 1672,
+      "chainOk": true
+    },
+    "verdict": "ready"
   },
   "error": null
 }

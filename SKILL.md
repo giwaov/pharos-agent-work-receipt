@@ -56,8 +56,8 @@ This Skill gives every paid agent task a simple on-chain proof.
 Checks Pharos RPC and chain ID.
 
 ```bash
-PHAROS_RPC_URL=https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC \
-PHAROS_CHAIN_ID=YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID \
+PHAROS_RPC_URL=https://infra.originstake.com/pharos/evm \
+PHAROS_CHAIN_ID=1672 \
 node pharos-agent-work-receipt.mjs doctor
 ```
 
@@ -96,8 +96,8 @@ Deploys the contract only with an explicit deployer key and `--broadcast`.
 
 ```bash
 forge build
-PHAROS_RPC_URL=https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC \
-PHAROS_CHAIN_ID=YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID \
+PHAROS_RPC_URL=https://infra.originstake.com/pharos/evm \
+PHAROS_CHAIN_ID=1672 \
 PHAROS_DEPLOYER_PRIVATE_KEY=0x... \
 node pharos-agent-work-receipt.mjs deploy --broadcast
 ```

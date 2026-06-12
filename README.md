@@ -89,8 +89,8 @@ Configure Pharos mainnet:
 
 ```bash
 # PowerShell
-$env:PHAROS_RPC_URL="https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC"
-$env:PHAROS_CHAIN_ID="YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID"
+$env:PHAROS_RPC_URL="https://infra.originstake.com/pharos/evm"
+$env:PHAROS_CHAIN_ID="1672"
 $env:PHAROS_NETWORK_NAME="Pharos Mainnet"
 ```
 
@@ -135,6 +135,31 @@ PHAROS_DEPLOYER_PRIVATE_KEY=0x... node pharos-agent-work-receipt.mjs deploy --br
 Private keys are read from environment variables only. Do not pass private keys as command arguments.
 
 This repository intentionally has no default RPC. `doctor` and `deploy` require explicit Pharos mainnet environment variables so the project cannot accidentally deploy to the wrong network.
+
+## Mainnet Verification
+
+The provided Pharos mainnet RPC was checked with `doctor`:
+
+```json
+{
+  "status": "success",
+  "action": "doctor",
+  "data": {
+    "rpc": {
+      "url": "https://infra.originstake.com/pharos/evm",
+      "reachable": true
+    },
+    "network": {
+      "name": "Pharos Mainnet",
+      "expectedChainId": 1672,
+      "actualChainId": 1672,
+      "chainOk": true
+    },
+    "verdict": "ready"
+  },
+  "error": null
+}
+```
 
 ## Example Output
 
