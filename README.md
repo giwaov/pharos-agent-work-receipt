@@ -133,6 +133,7 @@ PHAROS_DEPLOYER_PRIVATE_KEY=0x... node pharos-agent-work-receipt.mjs deploy --br
 ```
 
 Private keys are read from environment variables only. Do not pass private keys as command arguments.
+The `--broadcast` flag is required and is forwarded to `forge create` so the transaction is actually submitted.
 
 This repository intentionally has no default RPC. `doctor` and `deploy` require explicit Pharos mainnet environment variables so the project cannot accidentally deploy to the wrong network.
 

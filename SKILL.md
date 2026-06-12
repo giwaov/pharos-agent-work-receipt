@@ -93,6 +93,7 @@ node pharos-agent-work-receipt.mjs prepare-pay \
 ### deploy
 
 Deploys the contract only with an explicit deployer key and `--broadcast`.
+The wrapper forwards `--broadcast` to `forge create`; without it, Forge only prepares the transaction.
 
 ```bash
 forge build

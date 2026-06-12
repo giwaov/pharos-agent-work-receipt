@@ -305,6 +305,7 @@ async function deploy(args) {
     const result = spawnSync("forge", [
       "create",
       "contracts/AgentWorkReceipt.sol:AgentWorkReceipt",
+      "--broadcast",
       "--rpc-url",
       rpcUrl(),
       "--private-key",
