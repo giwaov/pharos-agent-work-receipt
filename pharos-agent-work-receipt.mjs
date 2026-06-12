@@ -6,10 +6,22 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_RPC_URL = "https://atlantic.dplabs-internal.com";
-const EXPECTED_CHAIN_ID = 688689n;
-const NETWORK_NAME = "Pharos Atlantic Testnet";
+const NETWORK_NAME = process.env.PHAROS_NETWORK_NAME || "Pharos Mainnet";
 const PAY_FOR_WORK_SELECTOR = "efcbc809";
+
+function rpcUrl() {
+  if (!process.env.PHAROS_RPC_URL) {
+    throw new Error("PHAROS_RPC_URL is required for mainnet mode.");
+  }
+  return process.env.PHAROS_RPC_URL;
+}
+
+function expectedChainId() {
+  if (!process.env.PHAROS_CHAIN_ID) {
+    throw new Error("PHAROS_CHAIN_ID is required for mainnet mode.");
+  }
+  return BigInt(process.env.PHAROS_CHAIN_ID);
+}
 
 function emit(payload) {
   console.log(JSON.stringify(payload, (_key, value) => (
@@ -47,7 +59,7 @@ function parseArgs(argv) {
 }
 
 async function rpcCall(method, params = []) {
-  const response = await fetch(process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL, {
+  const response = await fetch(rpcUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -171,6 +183,7 @@ function buildReceipt(args) {
 
 async function doctor(args) {
   try {
+    const expected = expectedChainId();
     const [chainIdHex, blockNumberHex, gasPriceHex] = await Promise.all([
       rpcCall("eth_chainId"),
       rpcCall("eth_blockNumber"),
@@ -195,24 +208,24 @@ async function doctor(args) {
         dependencies: "none",
       },
       rpc: {
-        url: process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL,
+        url: rpcUrl(),
         reachable: true,
       },
       network: {
         name: NETWORK_NAME,
-        expectedChainId: Number(EXPECTED_CHAIN_ID),
+        expectedChainId: Number(expected),
         actualChainId: Number(actualChainId),
-        chainOk: actualChainId === EXPECTED_CHAIN_ID,
+        chainOk: actualChainId === expected,
         latestBlock: Number(BigInt(blockNumberHex)),
       },
       feeData: {
         gasPriceWei: BigInt(gasPriceHex).toString(),
       },
       contract,
-      verdict: actualChainId === EXPECTED_CHAIN_ID ? "ready" : "wrong_chain",
+      verdict: actualChainId === expected ? "ready" : "wrong_chain",
     });
   } catch (error) {
-    fail("doctor", "DOCTOR_ERROR", error.message, "Check RPC URL, network access, or contract address.");
+    fail("doctor", "DOCTOR_ERROR", error.message, "Set PHAROS_RPC_URL and PHAROS_CHAIN_ID to the official Pharos mainnet values.");
   }
 }
 
@@ -270,6 +283,7 @@ function ensureArtifactExists() {
 
 async function deploy(args) {
   try {
+    const expected = expectedChainId();
     const privateKey = process.env.PHAROS_DEPLOYER_PRIVATE_KEY;
     if (!privateKey) {
       blocked("deploy", "MISSING_PRIVATE_KEY", "PHAROS_DEPLOYER_PRIVATE_KEY is not set.", "Set it locally in a secure shell to deploy.");
@@ -281,8 +295,8 @@ async function deploy(args) {
     }
 
     const chainIdHex = await rpcCall("eth_chainId");
-    if (BigInt(chainIdHex) !== EXPECTED_CHAIN_ID) {
-      blocked("deploy", "WRONG_CHAIN", "RPC is not Pharos Atlantic Testnet.", "Set PHAROS_RPC_URL to the Pharos Atlantic RPC.");
+    if (BigInt(chainIdHex) !== expected) {
+      blocked("deploy", "WRONG_CHAIN", "RPC is not the configured Pharos mainnet chain.", "Check PHAROS_RPC_URL and PHAROS_CHAIN_ID before deploying.");
       return;
     }
 
@@ -292,7 +306,7 @@ async function deploy(args) {
       "create",
       "contracts/AgentWorkReceipt.sol:AgentWorkReceipt",
       "--rpc-url",
-      process.env.PHAROS_RPC_URL || DEFAULT_RPC_URL,
+      rpcUrl(),
       "--private-key",
       privateKey,
     ], {
@@ -324,7 +338,9 @@ function help() {
       "deploy --broadcast",
     ],
     environment: {
-      PHAROS_RPC_URL: `Optional. Defaults to ${DEFAULT_RPC_URL}`,
+      PHAROS_RPC_URL: "Required. Official Pharos mainnet JSON-RPC endpoint.",
+      PHAROS_CHAIN_ID: "Required. Official Pharos mainnet chain ID.",
+      PHAROS_NETWORK_NAME: "Optional. Defaults to Pharos Mainnet.",
       PHAROS_DEPLOYER_PRIVATE_KEY: "Required only for deploy --broadcast.",
     },
   });

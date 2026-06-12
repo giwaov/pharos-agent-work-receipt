@@ -85,7 +85,16 @@ Build the contract:
 forge build
 ```
 
-Check Pharos Atlantic Testnet RPC:
+Configure Pharos mainnet:
+
+```bash
+# PowerShell
+$env:PHAROS_RPC_URL="https://YOUR_OFFICIAL_PHAROS_MAINNET_RPC"
+$env:PHAROS_CHAIN_ID="YOUR_OFFICIAL_PHAROS_MAINNET_CHAIN_ID"
+$env:PHAROS_NETWORK_NAME="Pharos Mainnet"
+```
+
+Check Pharos mainnet RPC:
 
 ```bash
 npm run doctor
@@ -116,7 +125,7 @@ node pharos-agent-work-receipt.mjs prepare-pay \
   --output '{"forecast":"sunny"}'
 ```
 
-Deploy to Pharos Atlantic Testnet:
+Deploy to Pharos mainnet:
 
 ```bash
 forge build
@@ -124,6 +133,8 @@ PHAROS_DEPLOYER_PRIVATE_KEY=0x... node pharos-agent-work-receipt.mjs deploy --br
 ```
 
 Private keys are read from environment variables only. Do not pass private keys as command arguments.
+
+This repository intentionally has no default RPC. `doctor` and `deploy` require explicit Pharos mainnet environment variables so the project cannot accidentally deploy to the wrong network.
 
 ## Example Output
 

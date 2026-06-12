@@ -3,6 +3,7 @@ out/
 cache/
 .env
 .env.*
+!.env.example
 *.log
 *.key
 *.pem
