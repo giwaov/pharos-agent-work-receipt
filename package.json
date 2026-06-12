@@ -1,0 +1,16 @@
+{
+  "name": "pharos-agent-work-receipt",
+  "version": "1.0.0",
+  "description": "Simple paid-work receipts for AI agents on Pharos.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "doctor": "node pharos-agent-work-receipt.mjs doctor",
+    "receipt": "node pharos-agent-work-receipt.mjs receipt",
+    "demo": "node pharos-agent-work-receipt.mjs receipt --caller 0x0000000000000000000000000000000000000001 --provider 0x0000000000000000000000000000000000000002 --skill weather.lookup --price 0.01 --input '{\"city\":\"Lagos\"}' --output '{\"forecast\":\"sunny\"}'"
+  },
+  "dependencies": {
+    "ethers": "^6.16.0"
+  }
+}
